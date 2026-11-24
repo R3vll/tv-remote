@@ -1,0 +1,38 @@
+# Builds the phone app (app/android) as an APK and attaches it to a GitHub release, for trying a change on a phone.
+# Started by hand only (never on push). It is signed with the same stable key as TV Home (the repo secret TVHOME_KEYSTORE_B64),
+# copied into the phone app's key slot, so every build has the same signature and installs over the one before it.
+# Fixed link: https://github.com/R3vll/tv-remote/releases/download/phone-latest/tv-remote.apk
+name: phone-apk
+on:
+  workflow_dispatch:
+    inputs:
+      tag: { description: "release tag to create or update with tv-remote.apk", required: true, default: "phone-latest" }
+permissions:
+  contents: write
+jobs:
+  apk:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: "17" }
+      - name: signing key
+        env:
+          KS: ${{ secrets.TVHOME_KEYSTORE_B64 }}
+        run: |
+          if [ -z "$KS" ]; then echo "secret TVHOME_KEYSTORE_B64 is missing: refusing to sign with a new key"; exit 1; fi
+          printf '%s' "$KS" | base64 -d > /tmp/stable.jks
+          keytool -importkeystore -srckeystore /tmp/stable.jks -srcstorepass tvhome -srcalias tvhome -srckeypass tvhome \
+            -destkeystore app/android/signing.jks -deststorepass tvremote -destalias tvremote -destkeypass tvremote -deststoretype JKS
+      - name: build
+        run: bash app/android/build.sh
+      - name: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp app/android/build/tv-remote.apk tv-remote.apk
+          if gh release view "${{ inputs.tag }}" >/dev/null 2>&1; then
+            gh release upload "${{ inputs.tag }}" tv-remote.apk --clobber
+          else
+            gh release create "${{ inputs.tag }}" tv-remote.apk --prerelease --target "${{ github.sha }}" --title "Phone app latest build" --notes "Latest phone app build from main, signed with the stable key."
+          fi
