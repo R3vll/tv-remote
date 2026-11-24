@@ -6,6 +6,8 @@ Three version numbers, each bumped only when its own part changes: `VERSION` (th
 
 ## Unreleased
 
+- TV Home: a new "World clock" row in Quick settings > Customize, above Themes. Pick a city (about 75 time zones) and the clock, date and greeting on Home show that city's time; the default is the TV's own time zone.
+
 - An install the TV never answered (ADB dropped during it) now says "The TV stopped answering midway" instead of an empty "could not install:".
 
 - The self-check: a TV whose ADB port opens but never answers is now "ADB is on, but it does not let this app in" (restart the TV), not "the TV's remote service does not answer".
