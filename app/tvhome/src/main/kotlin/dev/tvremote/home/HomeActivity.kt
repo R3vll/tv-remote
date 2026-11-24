@@ -2114,13 +2114,12 @@ class HomeActivity : Activity() {
     /** What a header line can say now (HomeConfig.TOKENS + "lunarLine"): the day's words in the TV's language, the lunar date. */
     private fun headWords(day: String, greet: String): Map<String, String> {
         val now = Date(); val loc = Locale.getDefault()
-        val tz = conf.optString("tz").takeIf { it.isNotEmpty() }?.let { java.util.TimeZone.getTimeZone(it) } ?: java.util.TimeZone.getDefault()   // the world clock's city
-        val c = Calendar.getInstance(tz)
+        val c = Calendar.getInstance()
         val moon = dev.tvremote.home.widgets.Lunar.of(c.get(Calendar.DAY_OF_MONTH), c.get(Calendar.MONTH) + 1, c.get(Calendar.YEAR))
         val (can, chi) = dev.tvremote.home.widgets.Lunar.canChi(moon.year)
         val canchi = getString(R.string.lunar_year, resources.getStringArray(R.array.lunar_can)[can], resources.getStringArray(R.array.lunar_chi)[chi]).trim()
         val lunar = "${moon.day}/${moon.month}"
-        fun f(p: String) = java.text.SimpleDateFormat(p, loc).apply { timeZone = tz }.format(now)
+        fun f(p: String) = DateFormat.format(p, now).toString()
         return mapOf("greet" to greet, "date" to day, "weekday" to f("EEEE").replaceFirstChar { it.uppercase(loc) }, "day" to f("d"),
             "month" to f("M"), "year" to f("yyyy"), "lunar" to lunar, "canchi" to canchi, "lunarLine" to getString(R.string.head_lunar, lunar, canchi))
     }
@@ -2140,11 +2139,8 @@ class HomeActivity : Activity() {
         val h24 = conf.optBoolean("clock24", true)
         clock.format24Hour = if (h24) "HH:mm" else "h:mm"
         clock.format12Hour = clock.format24Hour
-        val zone = conf.optString("tz").takeIf { it.isNotEmpty() }?.let { java.util.TimeZone.getTimeZone(it) }   // the world clock's city; none = the TV's own zone
-        clock.timeZone = zone?.id                                   // null = the TV's zone again
-        val now = Calendar.getInstance(zone ?: java.util.TimeZone.getDefault())
-        val day = java.text.SimpleDateFormat(DateFormat.getBestDateTimePattern(Locale.getDefault(), "EEEEdMMMM"), Locale.getDefault())
-            .apply { timeZone = zone ?: java.util.TimeZone.getDefault() }.format(Date())
+        val now = Calendar.getInstance()
+        val day = DateFormat.format(DateFormat.getBestDateTimePattern(Locale.getDefault(), "EEEEdMMMM"), Date()).toString()
             .replaceFirstChar { it.uppercase() }
         val hour = now.get(Calendar.HOUR_OF_DAY)
         val greet = getString(if (hour in 4..11) R.string.morning else if (hour in 12..17) R.string.afternoon else R.string.evening)
