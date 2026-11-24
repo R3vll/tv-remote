@@ -33,12 +33,12 @@ object WidgetSettings {
     private const val ROW_FOCUS = 0x2EFFFFFF; private const val ROW_REST = 0x12FFFFFF; private const val ROW_EDGE = 0x1FFFFFFF
     private const val CHIP_ON = 0x408AB4F8; private const val CHIP_OFF = 0x14FFFFFF
 
-    /** "Paris · GMT+1": a zone option's city with its offset from GMT now ("GMT", "GMT-5", "GMT+5:30"). */
+    /** "Paris · GMT+1": a zone option's city with its offset from UTC now ("UTC", "UTC -5", "UTC +5:30"). */
     private fun zoneWord(a: Context, v: String): String {
         if (v == "local") return a.getString(R.string.zone_tv)
         val m = java.util.TimeZone.getTimeZone(v).getOffset(System.currentTimeMillis()) / 60000
         val h = Math.abs(m) / 60; val r = Math.abs(m) % 60
-        val gmt = if (m == 0) "GMT" else "GMT" + (if (m < 0) "-" else "+") + h + (if (r != 0) ":" + "%02d".format(r) else "")
+        val gmt = if (m == 0) "UTC" else "UTC " + (if (m < 0) "-" else "+") + h + (if (r != 0) ":" + "%02d".format(r) else "")
         return HomeConfig.city(v) + " · " + gmt
     }
 
