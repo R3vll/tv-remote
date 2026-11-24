@@ -67,7 +67,7 @@ object Customize {
     private const val ADD = "+add"                                 // the add cell among the wall tiles (not a wall)
 
     /** One group of settings: a row on the first level and a page of controls behind it. [last] is where the focus was when it was left. */
-    private val PREVIEW = setOf("themes", "bg", "look", "widgets")              // pages seen on Home as they change: no dim over it (cols / rows open their own stepper, the panel hidden)
+    private val PREVIEW = setOf("zone", "themes", "bg", "look", "widgets")              // pages seen on Home as they change: no dim over it (cols / rows open their own stepper, the panel hidden)
 
     private class Group(c: Context, val key: String, val name: Int, val icon: Int) {
         val col = LinearLayout(c).apply { orientation = LinearLayout.VERTICAL; clipChildren = false; clipToPadding = false }
@@ -87,6 +87,7 @@ object Customize {
     private fun summary(a: Context, key: String, c: JSONObject): String {
         fun on(k: String) = a.getString(if (c.optBoolean(k, true)) R.string.w_on else R.string.w_off)
         return when (key) {
+            "zone" -> c.optString("tz").let { id -> if (id.isEmpty()) a.getString(R.string.zone_tv) else HomeConfig.city(id) }
             "themes" -> c.optString("theme").let { id -> if (id.isEmpty()) a.getString(R.string.th_custom) else themeName(a, c, id) }
             "bg" -> {
                 val set = c.optString("wevery") != "off"
@@ -369,7 +370,8 @@ object Customize {
             Group(a, "widgets", R.string.w_widgets, R.drawable.ic_gauge),
             Group(a, "dream", R.string.g_dream, R.drawable.ic_moon), Group(a, "keys", R.string.g_keys, R.drawable.ic_keyboard),
             Group(a, "system", R.string.g_system, R.drawable.ic_power),
-            Group(a, "lang", R.string.c_lang, R.drawable.ic_globe))     // the language list: opened from System's Language row, no row of its own
+            Group(a, "lang", R.string.c_lang, R.drawable.ic_globe),     // the language list: opened from System's Language row, no row of its own
+            Group(a, "zone", R.string.g_zone, R.drawable.ic_globe))     // the world clock: listed above Themes (last here so the indexes above stay), see [zoneFirst]
         groups[7].parent = groups[6]
         for (g in groups) g.col.setPadding(dp(28), dp(8), dp(28), dp(28))
         val top = LinearLayout(a).apply { orientation = LinearLayout.VERTICAL; clipChildren = false; clipToPadding = false; setPadding(dp(28), dp(26), dp(28), dp(28)) }
@@ -1075,6 +1077,30 @@ object Customize {
                 col.addView(row, LinearLayout.LayoutParams(-1, -2).apply { if (col.childCount > 0) topMargin = dp(8) })
             }
         }
+        groups[8].fill = {
+            // every city at once, the one in use ticked; the first is the TV's own zone. The clock, date and greeting on Home show that city's time
+            val now = Store.get(a).optString("tz")
+            val fmt = java.text.SimpleDateFormat(if (Store.get(a).optBoolean("clock24", true)) "HH:mm" else "h:mm a", java.util.Locale.getDefault())
+            for (id in listOf("") + HomeConfig.CITIES) {
+                val zone = if (id.isEmpty()) java.util.TimeZone.getDefault() else java.util.TimeZone.getTimeZone(id)
+                fmt.timeZone = zone
+                val row = LinearLayout(a).apply {
+                    orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; isFocusable = true; isClickable = true
+                    setPadding(dp(16), dp(13), dp(16), dp(13))
+                    background = TvGlass.rowBg(a, 16)
+                    addView(LinearLayout(a).apply {
+                        orientation = LinearLayout.VERTICAL
+                        addView(label(if (id.isEmpty()) a.getString(R.string.zone_tv) else HomeConfig.city(id), 16f, Color.WHITE))
+                        addView(label(if (id.isEmpty()) fmt.format(java.util.Date()) + " · " + zone.id.substringAfterLast('/').replace('_', ' ') else fmt.format(java.util.Date()), 12f, DIM))
+                    }, LinearLayout.LayoutParams(0, -2, 1f))
+                    if (id == now) { val (iv, sz) = icon(R.drawable.ic_check, ACCENT, dp(20)); addView(iv, LinearLayout.LayoutParams(sz, sz)) }
+                    onFocusChangeListener = View.OnFocusChangeListener { v, f -> lit(v, f) }
+                    setOnClickListener { if (id != Store.get(a).optString("tz")) Store.change(a, JSONObject().put("tz", id)) }
+                }
+                if (id == now) groups[8].start = { row }
+                col.addView(row, LinearLayout.LayoutParams(-1, -2).apply { if (col.childCount > 0) topMargin = dp(8) })
+            }
+        }
         fun build(g: Group) {
             val f = g.fill ?: return
             g.fill = null; g.made = f; conf = Store.get(a); col = g.col   // as it is now: another page may have changed it
@@ -1189,7 +1215,8 @@ object Customize {
                 setOnKeyListener { _, code, e -> if (code == android.view.KeyEvent.KEYCODE_DPAD_RIGHT && e.action == android.view.KeyEvent.ACTION_DOWN) { enter(g); true } else false }
             }
             g.row = row
-            if (g.parent == null) top.addView(row, LinearLayout.LayoutParams(-1, -2).apply { topMargin = if (g === groups[0]) dp(16) else dp(8) })
+            // the world clock is the first row, above Themes: put at 1, after the title
+            if (g.parent == null) top.addView(row, if (g.key == "zone") 1 else -1, LinearLayout.LayoutParams(-1, -2).apply { topMargin = if (g.key == "zone") dp(16) else dp(8) })
             // the page: a way back as its head ("‹ name"), then the controls
             g.head = LinearLayout(a).apply {
                 orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; isFocusable = true; isClickable = true
@@ -1290,7 +1317,7 @@ object Customize {
         }
         dialog.setOnShowListener {
             groups.firstOrNull { it.key == at }?.let { enter(it); still = false; slid = true; return@setOnShowListener }
-            groups[0].row?.let {
+            groups[8].row?.let {
                 it.requestFocus()
             }
             moved = true
