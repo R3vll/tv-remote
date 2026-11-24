@@ -42,6 +42,8 @@ const HOME_KEY_WORDS = { 183: 'home.key_red', 184: 'home.key_green', 185: 'home.
   175: 'home.key_captions', 222: 'home.key_audio', 229: 'home.key_lastch' };   // HomeConfig.KEY_NAMES
 const homeKeyName = (code) => HOME_KEY_WORDS[code] ? T(HOME_KEY_WORDS[code]) : code >= 7 && code <= 16 ? String(code - 7) : T('home.key_code', { n: code });   // KEYCODE_0 is 7
 const homeThemeName = (t) => (t.names || {})[window.LANG] || (t.names || {}).en || t.id;   // a ready-made theme's name in the page's language (the signed list's)
+const HOME_CITIES = ["Pacific/Honolulu", "America/Anchorage", "America/Los_Angeles", "America/Denver", "America/Chicago", "America/Mexico_City", "America/New_York", "America/Toronto", "America/Bogota", "America/Lima", "America/Caracas", "America/Halifax", "America/Sao_Paulo", "America/Argentina/Buenos_Aires", "Atlantic/Reykjavik", "Atlantic/Azores", "Europe/London", "Europe/Dublin", "Europe/Lisbon", "Africa/Casablanca", "Africa/Dakar", "Africa/Lagos", "Europe/Paris", "Europe/Madrid", "Europe/Berlin", "Europe/Rome", "Europe/Amsterdam", "Europe/Brussels", "Europe/Zurich", "Europe/Stockholm", "Europe/Warsaw", "Europe/Prague", "Europe/Vienna", "Africa/Algiers", "Africa/Tunis", "Africa/Cairo", "Africa/Johannesburg", "Africa/Nairobi", "Africa/Addis_Ababa", "Europe/Athens", "Europe/Helsinki", "Europe/Istanbul", "Europe/Kyiv", "Europe/Moscow", "Asia/Jerusalem", "Asia/Beirut", "Asia/Amman", "Asia/Baghdad", "Asia/Riyadh", "Asia/Kuwait", "Asia/Qatar", "Asia/Dubai", "Asia/Tehran", "Asia/Kabul", "Asia/Karachi", "Asia/Tashkent", "Asia/Kolkata", "Asia/Kathmandu", "Asia/Dhaka", "Asia/Yangon", "Asia/Bangkok", "Asia/Ho_Chi_Minh", "Asia/Jakarta", "Asia/Kuala_Lumpur", "Asia/Singapore", "Asia/Manila", "Asia/Hong_Kong", "Asia/Shanghai", "Asia/Taipei", "Asia/Seoul", "Asia/Tokyo", "Australia/Perth", "Australia/Adelaide", "Australia/Sydney", "Australia/Brisbane", "Pacific/Auckland", "Pacific/Fiji"];   // HomeConfig.CITIES: the world clock's cities ("tz")
+const homeCity = (id) => id.split('/').pop().replace(/_/g, ' ');
 const HOME_THEME_KEYS = ['wall', 'walls', 'wurl', 'wcol', 'wdir', 'wmode', 'wsnap', 'wkeep', 'wevery', 'shade', 'wfit', 'wfade', 'widgets', 'wsize', 'wopt', 'wplace', 'cols', 'center', 'rows', 'focus', 'tstyle', 'accent', 'motion', 'anim', 'clock24', 'greet'];   // HomeConfig.THEME_KEYS (tvcopy.test.js keeps them equal)
 const HOME_THEME_FILE_MAX = 32768;                                 // a theme file is a few KB; more is not one
 const HOME_THEMES_MAX = 12;                                           // HomeConfig.THEMES_MAX
@@ -546,6 +548,8 @@ async function homeOpen() {
   const layHead = el('h3', { textContent: T('home.layout') }), lay = el('div', { className: 'fchips laychips' }), layNote = el('p', { className: 'note' });
   // TV Home's words: the TV's language, or one chosen for it (HomeConfig.LANGS); absent from a TV Home older than the choice
   const langHead = el('h3', { textContent: T('home.lang') }), langs = el('div', { className: 'fchips' });
+  // the world clock (HomeConfig "tz"): the city whose time the TV's clock, date and greeting show; absent from a TV Home older than the choice
+  const zoneHead = el('h3', { textContent: T('home.g_zone') }), zones = el('div', { className: 'fchips' });
   // how the focused app shows (HomeConfig "focus"); absent from a TV Home older than the glass
   const focusHead = el('h3', { textContent: T('home.focus') }), focus = el('div', { className: 'fchips' });
   // how an app tile looks (HomeConfig "tstyle") and the one accent colour (HomeConfig "accent"); absent from a TV Home older than the two
@@ -738,6 +742,9 @@ async function homeOpen() {
       return el('button', { type: 'button', className: c.wall === w ? 'on' : '', onclick: () => send({ wall: w }) }, dot, el('span', { textContent: T(HOME_WALL_WORDS[w]) }));
     }));
     drawOwn(c); markSug(c);
+    zoneHead.hidden = zones.hidden = c.tz === undefined;
+    zones.replaceChildren(...[['', T('home.zone_tv')], ...HOME_CITIES.map((id) => [id, homeCity(id)])].map(([k, name]) =>
+      el('button', { type: 'button', className: (c.tz || '') === k ? 'on' : '', 'aria-pressed': String((c.tz || '') === k), onclick: () => send({ tz: k }) }, name)));
     langHead.hidden = langs.hidden = c.lang === undefined;
     // each language by its own name (langs.json), as TV Home's Customize shows it: a new language needs no id and no code here
     langs.replaceChildren(...[['', T('home.lang_tv')], ...Object.entries(LANGS)].map(([k, name]) =>
@@ -1208,6 +1215,7 @@ async function homeOpen() {
   const check = (box, words) => el('label', { className: 'check' }, box, el('span', { textContent: T(words) }));
   const vFold = UI.card(T('home.v_head'), { fold: true }, vfpsHead, vfps, vresHead, vres);   // the video's own settings, in the videos' part
   const GROUPS = [
+    ['zone', 'globe', 200, 'home.g_zone', [zones]],
     ['themes', 'star', 45, 'home.themes', [themeHint, themeMineHead, themeMine, themeLine, themeNote, themeReadyHead, themeReady, themeCommHead, themeComm]],
     ['bg', 'image', 330, 'home.wall', [multiRow, multiNote, everyHead, every, everyNote, shadeHead, shade, shadeNote, fitHead, fit, fitNote, fadeRow, fadeNote,
       hPhotos, photoAct, wPhotos, holdNote, galHead, gal, credit,                       // the person's own first, as TV Home's own screen
@@ -1262,6 +1270,8 @@ async function homeOpen() {
     : c.wall === 'bing' ? T('home.wall_bing') : HOME_WALL_WORDS[c.wall] ? T(HOME_WALL_WORDS[c.wall]) : c.wall;
   // the line under each group's name, as the TV's Customize writes it (summary())
   function sums(c) {
+    put(subs.zone, 'textContent', c.tz ? homeCity(c.tz) : T('home.zone_tv'));
+    rows.zone.hidden = c.tz === undefined;                          // a TV Home older than the world clock
     rows.themes.hidden = !c.themesOk;                                // a TV Home older than the themes
     put(subs.themes, 'textContent', !c.themesOk ? '' : !c.theme ? T('home.theme_custom') : ((c.themes || []).find((t) => t.id === c.theme) || {}).name || homeThemeName((c.themesBuiltin || []).find((t) => t.id === c.theme) || { id: c.theme }));
     const set = c.wrotate && c.wevery && c.wevery !== 'off' && c.wall !== 'web';
