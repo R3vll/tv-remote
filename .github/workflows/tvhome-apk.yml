@@ -1,11 +1,12 @@
 # Builds TV Home (app/tvhome) as an APK and attaches it to a GitHub release, for trying a change on a TV.
-# Started by hand only (never on push). The APK is signed with a key made on the runner (app/tvhome/build.sh does that when
-# signing.jks is missing), so it cannot update a TV Home installed from another build: uninstall that one first.
+# Started by hand only (never on push). The APK is signed with the key kept in the repo secret TVHOME_KEYSTORE_B64
+# (base64 of app/tvhome/signing.jks), so every build has the same signature and `adb install -r` updates a TV in place.
+# Fixed link: https://github.com/R3vll/tv-remote/releases/download/tvhome-latest/tv-home.apk
 name: tvhome-apk
 on:
   workflow_dispatch:
     inputs:
-      tag: { description: "release tag to create or update with tv-home.apk", required: true, default: "tvhome-test" }
+      tag: { description: "release tag to create or update with tv-home.apk", required: true, default: "tvhome-latest" }
 permissions:
   contents: write
 jobs:
@@ -15,6 +16,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: "17" }
+      - name: signing key
+        env:
+          KS: ${{ secrets.TVHOME_KEYSTORE_B64 }}
+        run: |
+          if [ -z "$KS" ]; then echo "secret TVHOME_KEYSTORE_B64 is missing: refusing to sign with a new key"; exit 1; fi
+          printf '%s' "$KS" | base64 -d > app/tvhome/signing.jks
       - name: build
         run: bash app/tvhome/build.sh
       - name: release
@@ -25,5 +32,5 @@ jobs:
           if gh release view "${{ inputs.tag }}" >/dev/null 2>&1; then
             gh release upload "${{ inputs.tag }}" tv-home.apk --clobber
           else
-            gh release create "${{ inputs.tag }}" tv-home.apk --prerelease --target "${{ github.sha }}" --title "TV Home test build ${{ inputs.tag }}" --notes "TV Home built from ${{ github.sha }} (test build, signed with a throwaway key)."
+            gh release create "${{ inputs.tag }}" tv-home.apk --prerelease --target "${{ github.sha }}" --title "TV Home latest build" --notes "Latest TV Home build from main, signed with the stable key. Update a TV: sh update-tv-home.sh TV_IP"
           fi
