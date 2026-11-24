@@ -38,7 +38,6 @@ import org.json.JSONObject
  *           runs in between. A TV Home that does this reports "wrotate": true (the page keeps its one-choice list for one that
  *           does not)
  *   clock24 24-hour clock; greet: the greeting under the clock
- *   tz      the city whose time the clock, date and greeting show ([CITIES], a time zone id); "" (default) = the TV's own time zone
  *   gstyle  what the greeting says ([GSTYLES]): "time" the time of day ("Good evening"), "name" that and [gname] ("Good evening,
  *           Hoang"), "own" [gtext] as written; one with nothing to show falls back to "time" ([greeting]). gname at most
  *           [GNAME_MAX], gtext at most [GTEXT_MAX], one line. A TV Home that has this reports "greetOk": true
@@ -342,7 +341,7 @@ object HomeConfig {
     fun options(k: String): List<Opt> {
         val size = Opt("size", "choice", SIZES, defaultSize(k), "wsize")
         return when {
-            k == "clock" -> listOf(size, Opt("face", "choice", listOf("classic", "minimal", "roman", "modern", "digital"), "classic"), Opt("theme", "choice", listOf("dark", "light"), "dark"), Opt("look", "choice", BARE, "glass"))
+            k == "clock" -> listOf(Opt("zone", "choice", listOf("local") + CITIES, "local"), size, Opt("face", "choice", listOf("classic", "minimal", "roman", "modern", "digital"), "classic"), Opt("theme", "choice", listOf("dark", "light"), "dark"), Opt("look", "choice", BARE, "glass"))
             k == "market" -> listOf(size, Opt("look", "choice", LOOKS, "glass"), Opt("layout", "choice", listOf("card", "ticker"), "card"), Opt("show", "choice", listOf("all", "gold", "rates"), "all"), Opt("btc", "toggle", emptyList(), "off"), Opt("fuel", "toggle", emptyList(), "off"))
             k == "calendar" -> listOf(size, Opt("look", "choice", LOOKS, "glass"), Opt("layout", "choice", listOf("month", "date"), "month"))
             k == "news" -> listOf(size, Opt("look", "choice", LOOKS, "glass"), Opt("src", "choice", listOf("auto", "mine", "both"), "auto"))
@@ -658,7 +657,7 @@ object HomeConfig {
     /** The settings a theme holds and an apply switches . */
     val THEME_KEYS = listOf("wall", "walls", "wurl", "wcol", "wdir", "wmode", "wsnap", "wkeep", "wevery", "shade", "wfit", "wfade",
         "widgets", "wsize", "wopt", "wplace", "cols", "center", "rows", "focus", "tstyle", "accent", "motion", "anim", "clock24", "greet")
-    /** The cities of the world clock ("tz"): a time zone id each, the city is the id's last part. Empty "tz" = the TV's own zone. */
+    /** The cities of the clock widget's time zone option ("zone"): a time zone id each, the city is the id's last part. "local" = the TV's own zone. */
     val CITIES = listOf("Pacific/Honolulu", "America/Anchorage", "America/Los_Angeles", "America/Denver", "America/Chicago", "America/Mexico_City",
         "America/New_York", "America/Toronto", "America/Bogota", "America/Lima", "America/Caracas", "America/Halifax", "America/Sao_Paulo",
         "America/Argentina/Buenos_Aires", "Atlantic/Reykjavik", "Atlantic/Azores", "Europe/London", "Europe/Dublin", "Europe/Lisbon",
@@ -880,7 +879,6 @@ object HomeConfig {
             .put("vfps", o.optString("vfps").takeIf { it in VFPS } ?: "")
             .put("vres", o.optString("vres").takeIf { it in VRES } ?: "")
             .put("clock24", o.optBoolean("clock24", true))
-            .put("tz", o.optString("tz").takeIf { it in CITIES } ?: "")               // the world clock: a city of [CITIES], "" = the TV's own time zone
             .put("lang", o.optString("lang").takeIf { it in LANGS } ?: "")
             .put("greet", o.optBoolean("greet", true))
             .put("gstyle", o.optString("gstyle").takeIf { it in GSTYLES } ?: GSTYLES[0])
