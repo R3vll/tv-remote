@@ -33,13 +33,16 @@ object WidgetSettings {
     private const val ROW_FOCUS = 0x2EFFFFFF; private const val ROW_REST = 0x12FFFFFF; private const val ROW_EDGE = 0x1FFFFFFF
     private const val CHIP_ON = 0x408AB4F8; private const val CHIP_OFF = 0x14FFFFFF
 
-    /** "Paris · GMT+1": a zone option's city with its offset from UTC now ("UTC", "UTC -5", "UTC +5:30"). */
+    /** "Paris · UTC +1 · DST": a zone option's city with its offset from UTC now ("UTC", "UTC -5", "UTC +5:30") and, for a zone with daylight time, whether it is on it ("DST") or not ("STD"): the offset already follows it by itself. */
     private fun zoneWord(a: Context, v: String): String {
         if (v == "local") return a.getString(R.string.zone_tv)
-        val m = java.util.TimeZone.getTimeZone(v).getOffset(System.currentTimeMillis()) / 60000
+        val tz = java.util.TimeZone.getTimeZone(HomeConfig.cityZone(v))
+        val now = System.currentTimeMillis()
+        val m = tz.getOffset(now) / 60000
         val h = Math.abs(m) / 60; val r = Math.abs(m) % 60
         val gmt = if (m == 0) "UTC" else "UTC " + (if (m < 0) "-" else "+") + h + (if (r != 0) ":" + "%02d".format(r) else "")
-        return HomeConfig.city(v) + " · " + gmt
+        val dst = if (!tz.useDaylightTime()) "" else " · " + (if (tz.inDaylightTime(java.util.Date(now))) "DST" else "STD")
+        return HomeConfig.city(v) + " · " + gmt + dst
     }
 
     private fun word(a: Context, id: String): String =
