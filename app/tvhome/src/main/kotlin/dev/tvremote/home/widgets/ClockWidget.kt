@@ -15,6 +15,7 @@ import android.widget.LinearLayout.LayoutParams
 import android.widget.LinearLayout.VERTICAL
 import android.widget.TextView
 import dev.tvremote.home.Font
+import dev.tvremote.home.HomeConfig
 import dev.tvremote.home.Store
 import dev.tvremote.home.ui.Frost
 import dev.tvremote.home.widgets.Widgets.Companion.DIM
@@ -30,7 +31,7 @@ import java.util.Date
 internal fun Widgets.clock(mode: Int): View {
     val face0 = opt("clock", "face"); val light0 = opt("clock", "theme") == "light"
     val locale = resources.locale0()
-    val zone = opt("clock", "zone").takeIf { it != "local" }?.let { java.util.TimeZone.getTimeZone(it) }   // the time zone option; null = the TV's own
+    val zone = opt("clock", "zone").takeIf { it != "local" }?.let { java.util.TimeZone.getTimeZone(HomeConfig.cityZone(it)) }   // the time zone option; null = the TV's own
     val dayF = SimpleDateFormat("EEEE", locale)
     val time = text("", if (mode == 2) 30f else 20f, Color.WHITE).apply { typeface = Font.medium; maxLines = 1 }   // the weekday, as big as the time was
     // big beside the face in a narrow widget (five in a row) "Chủ Nhật" came out cut: it shrinks to the column first
