@@ -671,6 +671,8 @@ object HomeConfig {
         "Pacific/Auckland", "Pacific/Fiji")
     /** A city's name from its zone id ("America/New_York" = "New York"). */
     fun city(id: String) = id.substringAfterLast('/').replace('_', ' ')
+    /** The zone a city's clock runs on where it is not the [CITIES] id's own: Casablanca stays on UTC, its zone's own +1 is never applied (the user, 2026-11-25). */
+    fun cityZone(id: String) = if (id == "Africa/Casablanca") "Etc/UTC" else id
 
     /** How an app tile looks ("tstyle"), the default first. */
     val TSTYLES = listOf("banner", "icon", "glass")
